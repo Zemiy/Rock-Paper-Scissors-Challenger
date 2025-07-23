@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rock Paper Scissors AI - Internet Computer</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.development.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.development.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+    <script src="https://unpkg.com/@dfinity/agent@0.19.2/lib/cjs/index.js"></script>
+    <script src="https://unpkg.com/@dfinity/candid@0.19.2/lib/cjs/index.js"></script>
+    <script src="https://unpkg.com/@dfinity/principal@0.19.2/lib/cjs/index.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .game-container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            max-width: 800px;
+            width: 90%;
+            backdrop-filter: blur(10px);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .title {
+            font-size: 2.5em;
+            color: #333;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .subtitle {
+            color: #666;
+            font-size: 1.1em;
+        }
+
+        .connection-status {
+            background: #e3f2fd;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .status-connected { background: #d4edda; color: #155724; }
+        .status-connecting { background: #fff3cd; color: #856404; }
+        .status-error { background: #f8d7da; color: #721c24; }
+
+        .login-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        input {
+            flex: 1;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        button {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: bold;
+        }
+
+        .btn-primary {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .user-info {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .game-area {
+            text-align: center;
+            margin: 30px 0;
+        }
+
+        .choices {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin: 30px 0;
+        }
+
+        .choice-btn {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            font-size: 40px;
+            background: white;
+            border: 3px solid #ddd;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .choice-btn:hover:not(:disabled) {
+            transform: scale(1.1);
+            border-color: #667eea;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+
+        .game-result {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 15px;
+            margin: 20px 0;
+        }
+
+        .battle {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            margin: 20px 0;
+        }
+
+        .player-choice, .bot-choice {
+            text-align: center;
+        }
+
+        .vs {
+            font-size: 2em;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .result-text {
+            font-size: 1.5em;
+            font-weight: bold;
+            margin: 15px 0;
+        }
+
+        .win { color: #28a745; }
+        .lose { color: #dc3545; }
+        .draw { color: #ffc107; }
+
+        .score-board {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .score-card {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .score-number {
+            font-size: 2em;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .loading {
+            text-align: center;
+            color: #666;
+            font-style: italic;
+        }
+
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 15px 0;
+        }
+
+        .canister-info {
+            background: #e8f5e8;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            font-size: 0.9em;
+            word-break: break-all;
+        }
+
+        @media (max-width: 600px) {
+            .choices {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .battle {
+                flex-direction: column;
+                gap: 20px;
+            }
+            
+            .vs {
+                transform: rotate(90deg);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        // IC Agent setup
+        let agent = null;
+        let actor = null;
+
+        const initIC = async () => {
+            try {
+                // Get canister ID from environment or use local development
+                const canisterId = process.env.CANISTER_ID_RPS_AI_BACKEND || 
+                                  window.CANISTER_ID_RPS_AI_BACKEND || 
+                                  'rdmx6-jaaaa-aaaah-qdrha-cai'; // Default local canister ID
+
+                // Create agent
+                const host = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+                    ? 'http://127.0.0.1:4943'
+                    : 'https://ic0.app';
+
+                agent = new dfinity.agent.HttpAgent({ host });
+
+                // For local development, fetch root key
+                if (host.includes('127.0.0.1')) {
+                    await agent.fetchRootKey();
+                }
+
+                // Create actor
+                const idlFactory = ({ IDL }) => {
+                    const Choice = IDL.Variant({
+                        'rock': IDL.Null,
+                        'paper': IDL.Null,
+                        'scissors': IDL.Null,
+                    });
+                    const Result = IDL.Variant({
+                        'win': IDL.Null,
+                        'lose': IDL.Null,
+                        'draw': IDL.Null,
+                    });
+                    const Score = IDL.Record({
+                        'wins': IDL.Nat,
+                        'losses': IDL.Nat,
+                        'draws': IDL.Nat,
+                        'totalGames': IDL.Nat,
+                    });
+                    const GameRecord = IDL.Record({
+                        'timestamp': IDL.Int,
+                        'player': Choice,
+                        'bot': Choice,
+                        'result': Result,
+                    });
+                    const PlayerStats = IDL.Record({
+                        'rock': IDL.Nat,
+                        'paper': IDL.Nat,
+                        'scissors': IDL.Nat,
+                    });
+
+                    return IDL.Service({
+                        'login': IDL.Func([IDL.Text], [IDL.Text], []),
+                        'logout': IDL.Func([], [IDL.Text], []),
+                        'play': IDL.Func([Choice], [IDL.Record({
+                            'player': Choice,
+                            'bot': Choice,
+                            'result': Result,
+                            'currentScore': Score,
+                        })], []),
+                        'getScore': IDL.Func([], [IDL.Opt(Score)], ['query']),
+                        'getHistory': IDL.Func([], [IDL.Opt(IDL.Vec(GameRecord))], ['query']),
+                        'getStats': IDL.Func([], [IDL.Opt(PlayerStats)], ['query']),
+                        'resetGame': IDL.Func([], [IDL.Text], []),
+                        'getCurrentUserInfo': IDL.Func([], [IDL.Opt(IDL.Text)], ['query']),
+                        'getAllUsers': IDL.Func([], [IDL.Vec(IDL.Text)], ['query']),
+                    });
+                };
+
+                actor = dfinity.agent.Actor.createActor(idlFactory, {
+                    agent,
+                    canisterId,
+                });
+
+                return { canisterId, connected: true };
+            } catch (error) {
+                console.error('Failed to initialize IC:', error);
+                throw error;
+            }
+        };
+
+        function App() {
+            const [connectionStatus, setConnectionStatus] = useState('connecting');
+            const [canisterInfo, setCanisterInfo] = useState(null);
+            const [currentUser, setCurrentUser] = useState('');
+            const [username, setUsername] = useState('');
+            const [loading, setLoading] = useState(false);
+            const [error, setError] = useState('');
+            const [gameResult, setGameResult] = useState(null);
+            const [score, setScore] = useState(null);
+
+            useEffect(() => {
+                const initialize = async () => {
+                    try {
+                        setConnectionStatus('connecting');
+                        const info = await initIC();
+                        setCanisterInfo(info);
+                        setConnectionStatus('connected');
+                        
+                        // Check if user is already logged in
+                        const userInfo = await actor.getCurrentUserInfo();
+                        if (userInfo.length > 0) {
+                            setCurrentUser(userInfo[0]);
+                            await loadScore();
+                        }
+                    } catch (err) {
+                        setConnectionStatus('error');
+                        setError('Failed to connect to Internet Computer: ' + err.message);
+                    }
+                };
+
+                initialize();
+            }, []);
+
+            const loadScore = async () => {
+                try {
+                    const scoreData = await actor.getScore();
+                    if (scoreData.length > 0) {
+                        setScore(scoreData[0]);
+                    }
+                } catch (err) {
+                    setError('Failed to load score: ' + err.message);
+                }
+            };
+
+            const handleLogin = async () => {
+                if (!username.trim()) {
+                    setError('Please enter a username');
+                    return;
+                }
+                
+                setLoading(true);
+                setError('');
+                try {
+                    await actor.login(username);
+                    setCurrentUser(username);
+                    setUsername('');
+                    await loadScore();
+                } catch (err) {
+                    setError('Login failed: ' + err.message);
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            const handleLogout = async () => {
+                setLoading(true);
+                try {
+                    await actor.logout();
+                    setCurrentUser('');
+                    setScore(null);
+                    setGameResult(null);
+                } catch (err) {
+                    setError('Logout failed: ' + err.message);
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            const handlePlay = async (choice) => {
+                setLoading(true);
+                setError('');
+                try {
+                    const result = await actor.play({ [choice]: null });
+                    setGameResult({
+                        player: Object.keys(result.player)[0],
+                        bot: Object.keys(result.bot)[0],
+                        result: Object.keys(result.result)[0],
+                        currentScore: result.currentScore
+                    });
+                    setScore(result.currentScore);
+                } catch (err) {
+                    setError('Game play failed: ' + err.message);
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            const handleReset = async () => {
+                if (!confirm('Are you sure you want to reset all game data?')) return;
+                
+                setLoading(true);
+                try {
+                    await actor.resetGame();
+                    setScore({wins: 0, losses: 0, draws: 0, totalGames: 0});
+                    setGameResult(null);
+                } catch (err) {
+                    setError('Reset failed: ' + err.message);
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            const getChoiceEmoji = (choice) => {
+                const emojis = { rock: '🗿', paper: '📄', scissors: '✂️' };
+                return emojis[choice] || '❓';
+            };
+
+            const getStatusText = () => {
+                switch (connectionStatus) {
+                    case 'connecting': return 'Connecting to Internet Computer...';
+                    case 'connected': return 'Connected to Internet Computer ✅';
+                    case 'error': return 'Connection Failed ❌';
+                    default: return '';
+                }
+            };
+
+            return (
+                <div className="game-container">
+                    <div className="header">
+                        <h1 className="title">🎮 Rock Paper Scissors AI</h1>
+                        <p className="subtitle">Powered by Internet Computer</p>
+                    </div>
+
+                    <div className={`connection-status status-${connectionStatus}`}>
+                        {getStatusText()}
+                    </div>
+
+                    {canisterInfo && (
+                        <div className="canister-info">
+                            <strong>Canister ID:</strong> {canisterInfo.canisterId}
+                        </div>
+                    )}
+
+                    {error && (
+                        <div className="error">
+                            {error}
+                        </div>
+                    )}
+
+                    {connectionStatus !== 'connected' ? (
+                        <div className="loading">Initializing connection to Internet Computer...</div>
+                    ) : !currentUser ? (
+                        <div className="login-section">
+                            <h3>Login to Play</h3>
+                            <div className="input-group">
+                                <input
+                                    type="text"
+                                    placeholder="Enter your username"
+                                    value={username}
+                                    onChange={(e) => setUsername(e.target.value)}
+                                    onKeyPress={(e) => e.key === 'Enter' && handleLogin()}
+                                    disabled={loading}
+                                />
+                                <button
+                                    className="btn-primary"
+                                    onClick={handleLogin}
+                                    disabled={loading}
+                                >
+                                    {loading ? 'Logging in...' : 'Login'}
+                                </button>
+                            </div>
+                        </div>
+                    ) : (
+                        <>
+                            <div className="user-info">
+                                <span><strong>Welcome, {currentUser}!</strong></span>
+                                <div>
+                                    <button className="btn-secondary" onClick={handleLogout} disabled={loading}>
+                                        Logout
+                                    </button>
+                                    <button className="btn-danger" onClick={handleReset} disabled={loading} style={{marginLeft: '10px'}}>
+                                        Reset Game
+                                    </button>
+                                </div>
+                            </div>
+
+                            {score && (
+                                <div className="score-board">
+                                    <div className="score-card">
+                                        <div className="score-number">{Number(score.wins)}</div>
+                                        <div>Wins</div>
+                                    </div>
+                                    <div className="score-card">
+                                        <div className="score-number">{Number(score.losses)}</div>
+                                        <div>Losses</div>
+                                    </div>
+                                    <div className="score-card">
+                                        <div className="score-number">{Number(score.draws)}</div>
+                                        <div>Draws</div>
+                                    </div>
+                                    <div className="score-card">
+                                        <div className="score-number">{Number(score.totalGames)}</div>
+                                        <div>Total Games</div>
+                                    </div>
+                                </div>
+                            )}
+
+                            <div className="game-area">
+                                <h3>Make Your Choice</h3>
+                                <div className="choices">
+                                    <button
+                                        className="choice-btn"
+                                        onClick={() => handlePlay('rock')}
+                                        disabled={loading}
+                                    >
+                                        🗿
+                                    </button>
+                                    <button
+                                        className="choice-btn"
+                                        onClick={() => handlePlay('paper')}
+                                        disabled={loading}
+                                    >
+                                        📄
+                                    </button>
+                                    <button
+                                        className="choice-btn"
+                                        onClick={() => handlePlay('scissors')}
+                                        disabled={loading}
+                                    >
+                                        ✂️
+                                    </button>
+                                </div>
+                                
+                                {loading && <div className="loading">Playing against AI...</div>}
+                            </div>
+
+                            {gameResult && (
+                                <div className="game-result">
+                                    <div className="battle">
+                                        <div className="player-choice">
+                                            <h4>You</h4>
+                                            <div style={{fontSize: '3em'}}>{getChoiceEmoji(gameResult.player)}</div>
+                                            <div>{gameResult.player}</div>
+                                        </div>
+                                        <div className="vs">VS</div>
+                                        <div className="bot-choice">
+                                            <h4>AI Bot</h4>
+                                            <div style={{fontSize: '3em'}}>{getChoiceEmoji(gameResult.bot)}</div>
+                                            <div>{gameResult.bot}</div>
+                                        </div>
+                                    </div>
+                                    <div className={`result-text ${gameResult.result}`}>
+                                        {gameResult.result === 'win' && ' You Win!'}
+                                        {gameResult.result === 'lose' && ' AI Wins!'}
+                                        {gameResult.result === 'draw' && ' It\'s a Draw!'}
+                                    </div>
+                                </div>
+                            )}
+                        </>
+                    )}
+                </div>
+            );
+        }
+
+        ReactDOM.render(<App />, document.getElementById('root'));
+    </script>
+</body>
+</html>
